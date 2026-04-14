@@ -7,7 +7,7 @@ A full-stack lead scoring dashboard that uses AI to rank inbound leads by their 
 
 ## What It Does
 
-1. Sales rep pastes a lead's email + company URL
+1. Sales rep pastes a lead's email + company URL + lead name + lead job title
 2. The AI agent researches the company (funding, tech stack, hiring signals, competitors)
 3. A propensity score (0–100) is calculated against your Ideal Customer Profile
 4. AI badges are assigned (High Intent, Decision Maker, Competitor User, etc.)
