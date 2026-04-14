@@ -65,53 +65,97 @@ ICP = {
 # ── Scoring Logic ─────────────────────────────────────────────────────────────
 
 def calculate_score(research: dict, lead_title: str) -> tuple[int, list[str]]:
-    score = 0
     badges = []
-
-    # Title match (0-25 pts)
     title_lower = lead_title.lower()
-    decision_maker_keywords = ["vp", "vice president", "director", "head of", "cro", "ceo", "founder", "owner", "manager"]
-    if any(k in title_lower for k in decision_maker_keywords):
-        score += 25
+
+    # ── Title Tier: base score from seniority ─────────────────────────────────
+    if any(k in title_lower for k in ["cro", "ceo", "cto", "cmo", "chief"]):
+        title_base = 88
         badges.append("Decision Maker")
+    elif any(k in title_lower for k in ["vp", "vice president"]):
+        title_base = 83
+        badges.append("Decision Maker")
+    elif any(k in title_lower for k in ["head of", "director"]):
+        title_base = 77
+        badges.append("Decision Maker")
+    elif any(k in title_lower for k in ["manager", "lead", "principal"]):
+        title_base = 71
+        badges.append("Decision Maker")
+    elif any(k in title_lower for k in ["founder", "owner", "partner"]):
+        title_base = 80
+        badges.append("Decision Maker")
+    elif any(k in title_lower for k in ["intern", "student", "trainee", "assistant"]):
+        title_base = 40
+    else:
+        title_base = 50
 
-    # Funding signal (0-20 pts)
+    is_decision_maker = title_base >= 70
+
+    # ── Company Tier: modifier from revenue & size ────────────────────────────
     funding = research.get("estimated_revenue", "").lower()
-    if any(stage.lower() in funding for stage in ["series c", "series d", "public", "ipo"]):
-        score += 20
-        badges.append("Series C+")
-    elif any(stage.lower() in funding for stage in ["series a", "series b"]):
-        score += 12
-        badges.append("Early Stage")
+    size = research.get("company_size", "").lower()
 
-    # Tech stack overlap (0-20 pts)
+    revenue_b = re.search(r'\$[\d.]+\s*b', funding)
+    revenue_m = re.search(r'\$[\d.]+\s*m', funding)
+    revenue_val = 0
+    if revenue_b:
+        revenue_val = float(re.search(r'[\d.]+', revenue_b.group()).group()) * 1000
+    elif revenue_m:
+        revenue_val = float(re.search(r'[\d.]+', revenue_m.group()).group())
+
+    is_public = any(k in funding for k in ["public", "ipo", "nasdaq", "nyse", "listed"])
+
+    if is_public or revenue_val >= 1000:
+        company_bonus = 5   # e.g. Shopify, HubSpot, Stripe, Zendesk
+        badges.append("Series C+")
+        badges.append("Enterprise")
+    elif revenue_val >= 200 or "enterprise" in size:
+        company_bonus = 3   # e.g. Notion, Canva, Freshworks
+        badges.append("Series C+")
+        badges.append("Enterprise")
+    elif revenue_val >= 50 or any(k in funding for k in ["series c", "series d"]):
+        company_bonus = 1
+        badges.append("Series C+")
+    elif revenue_val >= 10 or any(k in funding for k in ["series a", "series b"]):
+        company_bonus = 0
+        badges.append("Growth Stage")
+    else:
+        company_bonus = -5
+
+    # ── Signal Bonuses (max 1 pt per category = 3 total) ─────────────────────
+    signal_bonus = 0
+
+    # Industry fit
+    industry = research.get("industry", "").lower()
+    ideal_lower = ["saas", "e-commerce", "ecommerce", "fintech", "hr tech", "hrtech", "b2b", "marketplace", "software", "platform"]
+    if any(i in industry for i in ideal_lower):
+        signal_bonus += 1
+        badges.append("ICP Match")
+
+    # Hiring signals
+    hiring = research.get("open_roles", "").lower()
+    if any(k in hiring for k in ["sales", "revenue", "growth", "go-to-market", "gtm", "sdr", "bdr", "account executive"]):
+        signal_bonus += 1
+        badges.append("Growing Team")
+    elif any(k in hiring for k in ["hiring", "expanding", "recruiting"]):
+        signal_bonus += 1
+
+    # Tech stack overlap
     tech = research.get("tech_stack", "").lower()
     overlap = [t for t in ICP["tech_stack_fit"] if t.lower() in tech]
     if len(overlap) >= 2:
-        score += 20
+        signal_bonus += 1
         badges.append("Competitor User")
     elif len(overlap) == 1:
-        score += 10
+        signal_bonus += 1
 
-    # Hiring signals (0-20 pts)
-    hiring = research.get("open_roles", "").lower()
-    if "sales" in hiring or "revenue" in hiring or "growth" in hiring:
-        score += 15
-        badges.append("Growing Team")
+    # ── Final Score ────────────────────────────────────────────────────────────
+    final_score = title_base + company_bonus + signal_bonus
 
-    # Industry fit (0-15 pts)
-    industry = research.get("industry", "").lower()
-    if any(i.lower() in industry for i in ICP["ideal_industries"]):
-        score += 15
-
-    # Intent signals — bonus points
-    if score >= 70:
+    if final_score >= 80:
         badges.append("High Intent")
 
-    # Cap at 99
-    score = min(score, 99)
-
-    return score, badges
+    return min(max(final_score, 0), 100), badges
 
 
 def get_recommended_action(score: int, name: str) -> str:
@@ -146,14 +190,16 @@ No preamble, no markdown. Return this exact structure:
 {
   "company_overview": "2-sentence description",
   "top_competitors": ["Competitor1", "Competitor2", "Competitor3"],
-  "estimated_revenue": "e.g. $10M-$50M ARR",
-  "industry": "e.g. SaaS",
+  "estimated_revenue": "e.g. $7.1B ARR or 'Public company - $7.1B ARR'",
+  "industry": "e.g. SaaS, E-commerce, FinTech",
   "company_size": "SMB | Mid-Market | Enterprise",
   "tech_stack": "Known tools they use, comma separated",
-  "open_roles": "Brief description of hiring signals",
+  "open_roles": "Brief description of hiring signals (e.g. actively hiring sales, growth, and revenue roles)",
   "business_goals_2026": ["Goal 1", "Goal 2", "Goal 3"],
-  "sales_angle": "One sentence on why our B2B SaaS tool helps them now"
-}"""
+  "sales_angle": "One sentence on why our B2B SaaS tool helps them now",
+  "ai_score": 85
+}
+The ai_score is YOUR holistic assessment (0-100) of this company as a B2B SaaS sales prospect, based on: company size, growth trajectory, budget, decision-making power, and strategic fit. Be honest but optimistic for high-growth companies."""
                 },
                 {
                     "role": "user",

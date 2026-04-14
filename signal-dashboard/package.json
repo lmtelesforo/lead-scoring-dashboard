@@ -2,8 +2,12 @@
   "name": "signal-dashboard",
   "version": "1.0.0",
   "type": "module",
-  "scripts": { "build": "vite build", "dev": "vite" },
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite"
+  },
   "dependencies": {
+    "@supabase/supabase-js": "^2.103.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
