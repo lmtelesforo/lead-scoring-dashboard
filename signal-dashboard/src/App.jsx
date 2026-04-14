@@ -779,16 +779,12 @@ export default function App() {
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+            <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={closeModal} className="btn-premium" style={{ flex: 1, padding: '12px 0', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', fontFamily: 'var(--font-head)', fontSize: 13 }}>Cancel</button>
               <button onClick={handleScore} disabled={scoring} className="btn-premium" style={{ flex: 2, padding: '12px 0', borderRadius: 8, border: 'none', background: scoring ? 'var(--surface2)' : 'var(--accent)', color: scoring ? 'var(--accent)' : '#FFFFFF', fontFamily: 'var(--font-head)', fontSize: 13, fontWeight: 800, cursor: scoring ? 'default' : 'pointer', letterSpacing: '0.04em', boxShadow: scoring ? 'none' : '0 4px 12px rgba(37, 99, 235, 0.2)' }}>
                 {scoring ? '⬡ SCORING...' : 'RUN AI SCORING →'}
               </button>
             </div>
-
-            <button onClick={seedTestData} disabled={scoring} className="btn-premium" style={{ width: '100%', padding: '10px 0', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--accent)', fontFamily: 'var(--font-head)', fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-              ⚡ Seed 9 Test Leads from Photo
-            </button>
           </div>
         </div>
       )}
